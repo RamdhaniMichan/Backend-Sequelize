@@ -1,11 +1,32 @@
-const { Pool } = require("pg");
+const { Sequelize } = require("sequelize");
 
-const db = new Pool({
-  database: process.env.DBNAME,
-  password: process.env.DBPASSWORD,
-  port: process.env.DBPORT,
-  host: process.env.DBHOST,
-  user: process.env.DBUSER,
-});
+class db {
+  constructor() {
+    this.sequelize = new Sequelize(
+      process.env.DBNAME,
+      process.env.DBUSER,
+      process.env.DBPASSWORD,
+      {
+        host: process.env.DBHOST,
+        port: process.env.DBPORT,
+        dialect: "postgres",
+        dialectOptions: {
+          timezone: "Asia/Jakarta",
+        },
+      },
+    );
+  }
 
-module.exports = db;
+  sequelizeTest() {
+    this.sequelize
+      .authenticate()
+      .then(() => {
+        console.log("Connection has been established successfully.");
+      })
+      .catch((err) => {
+        console.error("Unable to connect to the database:", err);
+      });
+  }
+}
+
+module.exports = new db();

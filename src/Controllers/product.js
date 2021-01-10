@@ -1,104 +1,132 @@
-const product = {};
 const model = require("../Models/product");
 const respon = require("../Helpers/respons");
 const cloadUpload = require("../Helpers/cloadUpload");
 const { redisdb } = require("../Config/redis");
 
-product.get = async (req, res) => {
-  try {
-    const result = await model.get();
-    const cache = JSON.stringify(result);
-    redisdb.setex("product", 60, cache);
-    return respon(res, 200, result);
-  } catch (error) {
-    return respon(res, 404, error);
+class Product {
+  async commit(req, res) {
+    try {
+      const result = await model.commit();
+      return respon(res, 200, result);
+    } catch (error) {
+      return respon(res, 500, error);
+    }
   }
-};
 
-product.getByName = async (req, res) => {
-  try {
-    const result = await model.getByName(req.query.name);
-    return respon(res, 200, result);
-  } catch (error) {
-    return respon(res, 404, error);
+  async get(req, res) {
+    try {
+      const result = await model.get();
+      const cache = JSON.stringify(result);
+      redisdb.setex("product", 60, cache);
+      return respon(res, 200, result);
+    } catch (error) {
+      return respon(res, 404, error);
+    }
   }
-};
 
-product.findBy = async (req, res) => {
-  try {
-    const queryCategory = req.query.category;
-    const queryPrice = req.query.price;
-    const querySort = req.query.sort;
-    const result = await model.findBy(queryCategory, queryPrice, querySort);
-    return respon(res, 200, result);
-  } catch (error) {
-    return respon(res, 404, error);
+  async findBy(req, res) {
+    try {
+      const data = {};
+      let result = "";
+      const { name, price, category } = req.query;
+
+      if (name) {
+        data.name = name;
+      }
+      if (price) {
+        data.price = price;
+      }
+      if (category) {
+        data.category = category;
+      }
+
+      if (Object.keys(data.length === 0)) {
+        result = await model.get();
+      } else {
+        result = await model.findBy(data);
+      }
+
+      return respon(res, 200, result);
+    } catch (error) {
+      return respon(res, 404, error);
+    }
   }
-};
 
-product.add = async (req, res) => {
-  try {
-    const {
-      name, description, price, idcategory,
-    } = req.body;
-    if (name <= 0) {
-      return respon(res, 500, { msg: "Name is required" });
+  async add(req, res) {
+    try {
+      const {
+        name, description, price, idcategory,
+      } = req.body;
+      if (name <= 0) {
+        return respon(res, 500, { msg: "Name is required" });
+      }
+      if (description <= 0) {
+        return respon(res, 500, { msg: "Description is required" });
+      }
+      if (price <= 0) {
+        return respon(res, 500, { msg: "Price is required" });
+      }
+      if (req.file === undefined) {
+        return respon(res, 500, { msg: "Image is required" });
+      }
+      if (idcategory <= 0) {
+        return respon(res, 500, { msg: "Id Category is required" });
+      }
+      console.log(req.file.path);
+      req.body.image = await cloadUpload(req.file.path);
+      const result = await model.add(req.body);
+      return respon(res, 201, result);
+    } catch (error) {
+      return respon(res, 404, error);
     }
-    if (description <= 0) {
-      return respon(res, 500, { msg: "Description is required" });
-    }
-    if (price <= 0) {
-      return respon(res, 500, { msg: "Price is required" });
-    }
-    if (req.file === undefined) {
-      return respon(res, 500, { msg: "Image is required" });
-    }
-    if (idcategory <= 0) {
-      return respon(res, 500, { msg: "Id Category is required" });
-    }
-    const imgUrl = await cloadUpload(req.file.path);
-    const result = await model.add(req.body, imgUrl);
-    return respon(res, 201, result);
-  } catch (error) {
-    return respon(res, 404, error);
   }
-};
 
-product.update = async (req, res) => {
-  try {
-    const {
-      name, description, price, idcategory,
-    } = req.body;
-    if (name <= 0) {
-      return respon(res, 500, { msg: "Name is required" });
+  async update(req, res) {
+    try {
+      const {
+        id, name, description, price, idcategory,
+      } = req.body;
+      if (name <= 0) {
+        return respon(res, 500, { msg: "Name is required" });
+      }
+      if (description <= 0) {
+        return respon(res, 500, { msg: "Description is required" });
+      }
+      if (price <= 0) {
+        return respon(res, 500, { msg: "Price is required" });
+      }
+      if (req.file === undefined) {
+        return respon(res, 500, { msg: "Image is required" });
+      }
+      if (idcategory <= 0) {
+        return respon(res, 500, { msg: "Id Category is required" });
+      }
+
+      req.body.image = await cloadUpload(req.file.path);
+      const result = await model.update(req.body, id);
+      return respon(res, 200, result);
+    } catch (error) {
+      return respon(res, 404, error);
     }
-    if (description <= 0) {
-      return respon(res, 500, { msg: "Description is required" });
-    }
-    if (price <= 0) {
-      return respon(res, 500, { msg: "Price is required" });
-    }
-    if (req.file === undefined) {
-      return respon(res, 500, { msg: "Image is required" });
-    }
-    if (idcategory <= 0) {
-      return respon(res, 500, { msg: "Id Category is required" });
-    }
-    const imgUrl = await cloadUpload(req.file.path);
-    const result = await model.update(req.body, imgUrl);
-    return respon(res, 200, result);
-  } catch (error) {
-    return respon(res, 404, error);
   }
-};
 
-product.del = async (req, res) => {
-  try {
-    const result = await model.del(req.params.id);
-    return respon(res, 200, result);
-  } catch (error) {
-    return respon(res, 404, error);
+  async del(req, res) {
+    try {
+      const result = await model.destroy(req.params.id);
+      return respon(res, 200, result);
+    } catch (error) {
+      return respon(res, 404, error);
+    }
   }
-};
 
-module.exports = product;
+  async drop(req, res) {
+    try {
+      const result = await model.drop();
+      return respon(res, 200, result);
+    } catch (error) {
+      return respon(res, 500, error);
+    }
+  }
+}
+
+module.exports = new Product();

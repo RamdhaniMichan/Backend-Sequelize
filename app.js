@@ -7,7 +7,7 @@ const cors = require("cors");
 const morgan = require("morgan");
 const winston = require("winston");
 const routes = require("./src/main");
-const db = require("./src/Config/db");
+// const db = require("./src/Config/db").sequelize;
 const redis = require("./src/Config/redis");
 
 const myformat = winston.format.combine(
@@ -33,9 +33,9 @@ app.use(bodyPars.json());
 app.use(routes);
 app.use("/upload", express.static("upload"));
 
-db.connect()
-  .then(logger.log("info", "Database Connect"))
-  .catch((err) => logger.log("error", "Database Not Connect", err));
+// db.connect()
+//   .then(logger.log("info", "Database Connect"))
+//   .catch((err) => logger.log("error", "Database Not Connect", err));
 
 redis
   .redisCheck()

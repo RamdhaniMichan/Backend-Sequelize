@@ -1,35 +1,131 @@
-const db = require("../Config/db");
+const Sequelize = require("sequelize");
+const db = require("../Config/db").sequelize;
 
-const category = {};
+class Categorys {
+  constructor() {
+    this.Categorys = db.define("Categorys", {
+      id: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        autoIncrement: true,
+        primaryKey: true,
+      },
+      category: {
+        type: Sequelize.STRING(50),
+        allowNull: false,
+      },
+    });
+  }
 
-category.get = () => new Promise((resolve, reject) => {
-  db.query("SELECT * FROM public.category")
-    .then((res) => {
-      if (res.rows.length === 0) {
-        resolve("Data Not Found");
-      } else {
-        resolve(res.rows);
-      }
-    })
-    .catch((err) => reject(err));
-});
+  commit() {
+    return new Promise((resolve, reject) => {
+      this.Categorys.sync()
+        .then(() => {
+          resolve("Category Data Commit Success");
+        })
+        .catch((err) => {
+          console.log(err);
+          reject("Something went wrong \n", err);
+        });
+    });
+  }
 
-category.add = (data) => new Promise((resolve, reject) => {
-  db.query(`INSERT INTO public.category(category) VALUES ('${data.category}')`)
-    .then(resolve(data))
-    .catch((err) => reject(err));
-});
+  add(data) {
+    console.log(data);
+    return new Promise((resolve, reject) => {
+      this.Categorys.create({
+        category: data.category,
+      })
+        .then(() => {
+          resolve(`Data ${data.name} Success Create`);
+        })
+        .catch((err) => {
+          if (err.name.toString() === "SequelizeDatabaseError") {
+            reject("Please Commit Data");
+          } else {
+            reject(err);
+          }
+        });
+    });
+  }
 
-category.update = (data) => new Promise((resolve, reject) => {
-  db.query(`UPDATE public.category SET category = '${data.category}' WHERE id = ${data.id}`)
-    .then(resolve(data))
-    .catch((err) => reject(err));
-});
+  update(data, id) {
+    return new Promise((reslove, reject) => {
+      this.Categorys.findByPk(id)
+        .then((record) => {
+          if (!record) {
+            reject("Data not found");
+          }
 
-category.del = (id) => new Promise((resolve, reject) => {
-  db.query(`DELETE FROM public.category WHERE id = ${id}`)
-    .then(resolve(id))
-    .catch((err) => reject(err));
-});
+          record.update(data).then(() => {
+            reslove(`Data ${data.name} Success Update`);
+          });
+        })
+        .catch((err) => {
+          if (err.name.toString() === "SequelizeDatabaseError") {
+            reject("Please commit data");
+          } else {
+            reject(err);
+          }
+        });
+    });
+  }
 
-module.exports = category;
+  getAll() {
+    return new Promise((resolve, reject) => {
+      this.Categorys.findAll()
+        .then((res) => {
+          if (res.length <= 0) {
+            resolve("Data not found");
+          } else {
+            resolve(res);
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+          if (err.name.toString() === "SequelizeDatabaseError") {
+            reject("Please Commit Data");
+          } else {
+            reject(err);
+          }
+        });
+    });
+  }
+
+  destroy(id) {
+    return new Promise((reslove, reject) => {
+      this.Users.findByPk(id)
+        .then((record) => {
+          if (!record) {
+            reject("Data not found");
+          }
+
+          record.destroy().then(() => {
+            reslove(`Data ${id} Success Delete`);
+          });
+        })
+        .catch((err) => {
+          if (err.name.toString() === "SequelizeDatabaseError") {
+            reject("Please commit data");
+          } else {
+            reject(err);
+          }
+        });
+    });
+  }
+
+  drop() {
+    return new Promise((resolve, reject) => {
+      this.Categorys.drop()
+        .then(() => {
+          resolve("Category Data Commit Success");
+        })
+        .catch((err) => {
+          console.log(err);
+          reject("Something went wrong \n", err);
+        });
+    });
+  }
+}
+
+module.exports = new Categorys();

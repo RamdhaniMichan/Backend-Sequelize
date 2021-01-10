@@ -1,57 +1,186 @@
-const db = require("../Config/db");
-require("../Controllers/product");
+const Sequelize = require("sequelize");
+const db = require("../Config/db").sequelize;
+const modelCategory = require("./category");
 
-const product = {};
+class Products {
+  constructor() {
+    this.Products = db.define("Products", {
+      id: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        autoIncrement: true,
+        primaryKey: true,
+      },
+      name: {
+        type: Sequelize.STRING(50),
+        allowNull: false,
+      },
+      description: {
+        type: Sequelize.STRING(100),
+        allowNull: false,
+      },
+      price: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+      },
+      image: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
+      idcategory: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: {
+          model: "Categorys",
+          key: "id",
+        },
+      },
+    });
+    this.Products.belongsTo(modelCategory.Categorys, {
+      foreignKey: "idcategory",
+      as: "Category",
+    });
+  }
 
-product.get = () => new Promise((resolve, reject) => {
-  db.query("SELECT * FROM public.product ORDER BY id DESC")
-    .then((res) => {
-      if (res.rows.length === 0) {
-        resolve("Data Not Found");
-      } else {
-        resolve(res.rows);
-      }
-    })
-    .catch((err) => reject(err));
-});
+  commit() {
+    return new Promise((resolve, reject) => {
+      this.Products.sync()
+        .then(() => {
+          resolve("Product Data Commit Success");
+        })
+        .catch((err) => {
+          console.log(err);
+          reject("Something went wrong \n", err);
+        });
+    });
+  }
 
-product.getByName = (name) => new Promise((resolve, reject) => {
-  db.query(`SELECT * FROM public.product WHERE name LIKE '%${name}%'`)
-    .then((res) => {
-      resolve(res.rows);
-    })
-    .catch((err) => reject(err));
-});
+  get() {
+    return new Promise((resolve, reject) => {
+      this.Products.findAll({
+        order: [["createdAt", "DESC"]],
+        include: [{ model: modelCategory.Categorys, as: "Category" }],
+      })
+        .then((res) => {
+          if (res.length <= 0) {
+            resolve("Data not found");
+          } else {
+            resolve(res);
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+          if (err.name.toString() === "SequelizeDatabaseError") {
+            reject("Please Commit Data");
+          } else {
+            reject(err);
+          }
+        });
+    });
+  }
 
-product.findBy = (queryCategory, queryPrice, querySort, orderBy = "id") => new Promise((resolve, reject) => {
-  db.query(`SELECT *
-            FROM product
-            INNER JOIN category ON (product.idfood = category.id)
-            WHERE category.category = '${queryCategory}' OR product.price = '${queryPrice}'
-            ORDER BY product.${orderBy} ${querySort}`)
-    .then((res) => {
-      resolve(res.rows);
-    })
-    .catch((err) => reject(err));
-});
+  findBy(data) {
+    return new Promise((reslove, reject) => {
+      this.Products.findAll({
+        order: [["createdAt", "DESC"]],
+        where: data,
+      })
+        .then((res) => {
+          if (res.length <= 0) {
+            reslove("Data not Found");
+          } else {
+            reslove(res);
+          }
+        })
+        .catch((err) => {
+          if (err.name.toString() == "SequelizeDatabaseError") {
+            reject("Please commit data");
+          } else {
+            reject(err);
+          }
+        });
+    });
+  }
 
-product.add = (data, img) => new Promise((resolve, reject) => {
-  db.query(`INSERT INTO public.product(name, description, price, image, idcategory) 
-            VALUES ('${data.name}', '${data.description}', ${data.price}, '${img}', ${data.idcategory})`)
-    .then(resolve(`${data.name} Product added`))
-    .catch((err) => reject(err));
-});
+  add(data) {
+    console.log(data);
+    return new Promise((resolve, reject) => {
+      this.Products.create({
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        image: data.image,
+        idcategory: data.idcategory,
+      })
+        .then(() => {
+          resolve(`Data ${data.name} Success Update`);
+        })
+        .catch((err) => {
+          if (err.name.toString() === "SequelizeDatabaseError") {
+            reject("Please Commit Data");
+          } else {
+            reject(err);
+          }
+        });
+    });
+  }
 
-product.update = (data, img) => new Promise((resolve, reject) => {
-  db.query(`UPDATE public.product SET name = '${data.name}', description = '${data.description}', price = ${data.price}, image = '${img}', idcategory = ${data.idcategory} WHERE id = ${data.id}`)
-    .then(resolve(`${data.name} Product update`))
-    .catch((err) => { reject(err); });
-});
+  update(data, id) {
+    return new Promise((reslove, reject) => {
+      this.Products.findByPk(id)
+        .then((record) => {
+          if (!record) {
+            reject("Data not found");
+          }
 
-product.del = (id) => new Promise((resolve, reject) => {
-  db.query(`DELETE FROM public.product WHERE id = ${id}`)
-    .then(resolve(`${id} Delete success`))
-    .catch((err) => reject(err));
-});
+          record.update(data).then(() => {
+            reslove(`Data ${data.name} Success Update`);
+          });
+        })
+        .catch((err) => {
+          if (err.name.toString() === "SequelizeDatabaseError") {
+            reject("Please commit data");
+          } else {
+            reject(err);
+          }
+        });
+    });
+  }
 
-module.exports = product;
+  destroy(id) {
+    return new Promise((reslove, reject) => {
+      this.Products.findByPk(id)
+        .then((record) => {
+          if (!record) {
+            reject("Data not found");
+          }
+
+          record.destroy().then(() => {
+            reslove(`Data ${id} Success Delete`);
+          });
+        })
+        .catch((err) => {
+          if (err.name.toString() === "SequelizeDatabaseError") {
+            reject("Please commit data");
+          } else {
+            reject(err);
+          }
+        });
+    });
+  }
+
+  drop() {
+    return new Promise((reslove, reject) => {
+      this.Products.drop()
+        .then(() => {
+          reslove("User data Droped succsess");
+        })
+        .catch((err) => {
+          console.log(err);
+          reject("Something when wrong \n", err);
+        });
+    });
+  }
+}
+
+module.exports = new Products();
